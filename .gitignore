@@ -9,3 +9,4 @@ rel/mongodb_pool
 rel/mongodb_pool*
 .concrete/DEV_MODE
 .rebar
+logs
