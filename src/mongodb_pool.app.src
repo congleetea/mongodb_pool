@@ -1,0 +1,14 @@
+{application, mongodb_pool,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  poolboy,
+                  mongodb
+                 ]},
+  {mod, { mongodb_pool_app, []}},
+  {env, []}
+ ]}.

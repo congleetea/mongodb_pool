@@ -5,6 +5,7 @@ deps
 *.plt
 erl_crash.dump
 ebin
-rel/example_project
+rel/mongodb_pool
+rel/mongodb_pool*
 .concrete/DEV_MODE
 .rebar
