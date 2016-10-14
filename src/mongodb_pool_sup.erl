@@ -18,9 +18,6 @@
 %% API functions
 %% ===================================================================
 start_link() ->
-    
-
-
     {ok, Pools} = application:get_env(mongodb_pool, pools),
     {ok, GlobalOrLocal} = application:get_env(mongodb_pool, global_or_local),
     start_link(Pools, GlobalOrLocal).
