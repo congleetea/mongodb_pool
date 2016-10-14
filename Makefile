@@ -19,19 +19,17 @@ edoc:
 clean:
 	@$(REBAR) clean
 
-# rel: compile
-# 	@cd rel && $(REBAR) generate -f
-
-tests: clean get-deps compile eunit ct
-
-eunit:
-	@$(REBAR) eunit skip_deps=true
-
-ct:
-	@$(REBAR) ct skip_deps=true
-
 xref:
 	@$(REBAR) xref skip_deps=true
 
 rel: compile
 	@cd rel && $(REBAR) generate -f
+
+tests: clean get-deps compile eunit ct
+
+eunit:
+	# @rm -rf logs
+	$(REBAR) eunit skip_deps=true
+
+ct:
+	@$(REBAR) ct skip_deps=true
