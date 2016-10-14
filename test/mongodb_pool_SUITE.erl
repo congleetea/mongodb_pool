@@ -44,7 +44,7 @@ end_per_suite(_Config) ->
     application:stop(bson),
     ok.
 
-init_per_testcase(Case, Config) ->
+init_per_testcase(insert_and_find, Config) ->
     [{pool_name, mongo_test_pool},{collection, cttest} | Config].
 
 end_per_testcase(_Case, Config) ->
@@ -53,7 +53,5 @@ end_per_testcase(_Case, Config) ->
 insert_and_find(Config)->
     PoolName = ?config(pool_name, Config),
     Collection = ?config(collection, Config),
-    P_SUP = whereis(mongodb_pool_sup),
-    io:format("~n~p:~p:P_SUP=~p~n", [?MODULE, ?LINE, P_SUP]),
-    %% mongodb_pool:insert(PoolName, Collection, {<<"name">>, <<"cong1">>, <<"sex">>, <<"man">>, <<"age">>, 26}),
+    mongodb_pool:insert(PoolName, Collection, {<<"name">>, <<"cong1">>, <<"sex">>, <<"man">>, <<"age">>, 26}),
     true.
