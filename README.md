@@ -77,7 +77,7 @@ Command:  {$set/$unset/$inc/..., TupleDocs}
 ### 删除
 - mongodb_pool:delete(PoolName, Collection, Selector)
 
-### 管道
+### 聚合
 mongodb_pool:aggregate(PoolName, Collection, Command)
 
 Command 是一个list，可以包括很多特定元组，这些参数这可以实现前面的一些功能，比如skip，project，limit的功能。
