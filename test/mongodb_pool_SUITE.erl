@@ -80,8 +80,11 @@ insert_and_find(Config)->
     true = match_bson(InsertManyItems, FindMany),
 
     %% find_one.
-    FindOne = mongodb_pool:find_one(PoolName, Collection, {<<"gender">>, <<"female">>}),
-    1 = length(FindOne),
+    FindOne = mongodb_pool:find_one(PoolName, Collection, {<<"gender">>, <<"female">>}, [{projector, {<<"_id">>, false}}]),
+    ct:log("FindOne:~p~n", [FindOne]),
+    #{<<"age">> := 21,
+      <<"gender">> := <<"female">>,
+      <<"name">> := <<"ting1">>} = FindOne,
 
     %% find by projector, skip, batchsize.
     %% find by projector (<<"_id">> is found default)
