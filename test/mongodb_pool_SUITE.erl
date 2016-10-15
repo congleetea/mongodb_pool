@@ -257,6 +257,7 @@ sort_and_limit(Config) ->
     PoolName = ?config(pool_name, Config),
     Collection = ?config(collection, Config),
     mongodb_pool:delete(PoolName, Collection, {}),
+
     %% insert test data
     mongodb_pool:insert(PoolName, Collection, [
                                           {<<"key">>, <<"test">>, <<"value">>, <<"two">>, <<"tag">>, 2},
@@ -269,14 +270,20 @@ sort_and_limit(Config) ->
     %% test match and sort
     %% db.<Collection>.aggregate({$match: {"key": "test"}}, {$sort: {"tag": 1}})
     %% mongodb_pool:find_sort(PoolName, Collection, Selector1, Sort1),
-    PassSeq = mongodb_pool:aggregate(PoolName, Collection, {<<"key">>, <<"test">>}, [{sort, {<<"tag">>, 1}}]),
+    PassSeq = mongodb_pool:aggregate(PoolName, Collection, <<"pipeline">>,
+                                     [{<<"$match">>,  {<<"key">>, <<"test">>}},
+                                      {<<"$sort">>, {<<"tag">>, 1}}
+                                     ]),
+    ct:log("PassSeq:~p~n", [PassSeq]),
     [
      #{<<"key">> := <<"test">>, <<"value">> := <<"one">>, <<"tag">> := 1},
      #{<<"key">> := <<"test">>, <<"value">> := <<"two">>, <<"tag">> := 2},
      #{<<"key">> := <<"test">>, <<"value">> := <<"three">>, <<"tag">> := 3},
      #{<<"key">> := <<"test">>, <<"value">> := <<"four">>, <<"tag">> := 4}
     ] = PassSeq,
-    InvertedSeq = mongodb_pool:aggregate(PoolName, Collection, [{match, {<<"key">>, <<"test">>}}, {sort, {<<"tag">>, -1}}]),
+    InvertedSeq = mongodb_pool:aggregate(PoolName, Collection, <<"pipeline">>,
+                                         [{<<"$match">>, {<<"key">>, <<"test">>}},
+                                          {<<"$sort">>, {<<"tag">>, -1}}]),
     [
      #{<<"key">> := <<"test">>, <<"value">> := <<"four">>, <<"tag">> := 4},
      #{<<"key">> := <<"test">>, <<"value">> := <<"three">>, <<"tag">> := 3},
@@ -285,20 +292,15 @@ sort_and_limit(Config) ->
     ] = InvertedSeq,
 
     %% test match & sort with limit
-    %% db.sort_and_limit.aggregate({$match: {"key": "test"}}, {$sort: {"tag": -1}}, {$limit: 1})
-    SortLimit = mongodb_pool:aggregate(PoolName, Collection,
-                                       [{match, {{<<"key">>, <<"test">>}}},
-                                        {sort, {<<"tag">>, 1}},
-                                        {limit, 1}]),
-    [#{<<"key">> := <<"test">>, <<"value">>:= <<"one">>, <<"tag">> := 1}] = SortLimit,
-
-    %% test match & sort with limit
-    %% db.sort_and_limit.aggregate({$match: {"key": "test"}}, {$sort: {"tag": 1}}, {$limit: 1})
-    ProjSortLimit = mongodb_pool:aggregate(PoolName, Collection,
-                                       [{match, {{<<"key">>, <<"test">>}}},
-                                        {project, [{<<"_id">>, 0, <<"key">>, 1, <<"value">>, 1}]},
-                                        {sort, {<<"tag">>, 1}},
-                                        {limit, 1}]),
+    %% db.sort_and_limit.aggregate({$match: {"key": "test"}},{"$project": {"_id" : 0, "key": 1, "value": 1}} {"$sort": {"tag": 1}}, {"$limit": 1})
+    ProjSortLimit = mongodb_pool:aggregate(PoolName, Collection, <<"pipeline">>,
+                                           [{<<"$match">>, {<<"key">>, <<"test">>}},
+                                            %% {<<"$project">>, {<<"_id">>, 0, <<"key">>, 1, <<"value">>, 1}} % the position of $projector affacts the result.
+                                            {<<"$sort">>, {<<"tag">>, 1}},
+                                            {<<"$limit">>, 1}
+                                            %% {<<"$project">>, {<<"_id">>, 0, <<"key">>, 1, <<"value">>, 1}}
+                                           ]),
+    ct:log("ProjSortLimit:~p~n", [ProjSortLimit]),
     [#{<<"key">> := <<"test">>, <<"value">>:= <<"one">>}] = ProjSortLimit,
     Config.
 

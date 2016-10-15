@@ -20,6 +20,7 @@
          delete/3, delete_one/3,
          update/4, update/5,
          count/3, count/4,
+         aggregate/4,
          ensure_index/3]).
 -export([description/0]).
 
@@ -112,6 +113,15 @@ delete(PoolName, Collection, Selector)->
 delete_one(PoolName, Collection, Selector)->
     poolboy:transaction(PoolName, fun(Worker)->
                                           mongo:delete_one(Worker, Collection, Selector)
+                                  end).
+
+-spec aggregate(atom(), collection(), binary(), list()) -> list().
+aggregate(PoolName, Collection, Q, AggArgs) ->
+    poolboy:transaction(PoolName, fun(Worker)->
+                                          {true, #{<<"result">> := Res}} =
+                                              mongo:command(Worker,
+                                                            {<<"aggregate">>, Collection, Q,AggArgs}),
+                                          Res
                                   end).
 
 -spec ensure_index(PoolName::atom(), Collection::collection(), Index::bson:document())->ok.
