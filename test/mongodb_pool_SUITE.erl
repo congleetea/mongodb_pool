@@ -22,7 +22,8 @@
         ,insert_and_count/1
         ,insert_and_update/1
         ,insert_and_delete/1
-        ,sort_and_limit/1]).
+        ,sort_and_limit/1
+        ,insert_map/1]).
 
 all() ->
     [
@@ -31,6 +32,7 @@ all() ->
     , insert_and_update
     , insert_and_delete
     , sort_and_limit
+    , insert_map
     ].
 
 init_per_suite(Config)->
@@ -77,6 +79,10 @@ insert_and_find(Config)->
     io:format("~n~p:~p:FindMany=~p~n", [?MODULE, ?LINE, FindMany]),
     true = match_bson(InsertManyItems, FindMany),
 
+    %% find_one.
+    FindOne = mongodb_pool:find_one(PoolName, Collection, {<<"gender">>, <<"female">>}),
+    1 = length(FindOne),
+
     %% find by projector, skip, batchsize.
     %% find by projector (<<"_id">> is found default)
     FindProjector = mongodb_pool:find(PoolName, Collection, {<<"gender">>, <<"female">>}, [{projector, {<<"_id">>, false, <<"name">>, true, <<"age">>, true}}]),
@@ -84,6 +90,7 @@ insert_and_find(Config)->
     lists:member(#{<<"name">> => <<"ting1">>, <<"age">> => 21}, FindProjector),
     lists:member(#{<<"name">> => <<"ting2">>, <<"age">> => 22}, FindProjector),
     lists:member(#{<<"name">> => <<"ting3">>, <<"age">> => 23}, FindProjector),
+
     %% find by projector and skip, skip first document.
     FindProjAndSkip = mongodb_pool:find(PoolName, Collection, {<<"gender">>, <<"female">>},
                                         [{projector, {<<"_id">>, false, <<"name">>, true, <<"age">>, true}},
@@ -93,6 +100,7 @@ insert_and_find(Config)->
     false =  lists:member(#{<<"name">> => <<"ting1">>, <<"age">> => 21}, FindProjAndSkip),
     true  = lists:member(#{<<"name">> => <<"ting2">>, <<"age">> => 22}, FindProjAndSkip),
     true  = lists:member(#{<<"name">> => <<"ting3">>, <<"age">> => 23}, FindProjAndSkip),
+
     %% Find with order: just show one document.
     FindPrjSkipBs1 = mongodb_pool:find(PoolName, Collection, {<<"gender">>, <<"female">>},
                                   [{projector, {<<"_id">>, false, <<"name">>, true, <<"age">>, true}},
@@ -245,7 +253,7 @@ insert_and_delete(Config) ->
 sort_and_limit(Config) ->
     PoolName = ?config(pool_name, Config),
     Collection = ?config(collection, Config),
-
+    mongodb_pool:delete(PoolName, Collection, {}),
     %% insert test data
     mongodb_pool:insert(PoolName, Collection, [
                                           {<<"key">>, <<"test">>, <<"value">>, <<"two">>, <<"tag">>, 2},
@@ -256,31 +264,73 @@ sort_and_limit(Config) ->
                                          ]),
 
     %% test match and sort
-    {true, #{<<"result">> := Res}} = mongodb_pool:command(PoolName,
-                                                   {<<"aggregate">>, Collection, <<"pipeline">>, [{<<"$match">>, {<<"key">>, <<"test">>}}, {<<"$sort">>, {<<"tag">>, 1}}]}),
-    ct:pal("Got ~p", [Res]),
-
+    %% db.<Collection>.aggregate({$match: {"key": "test"}}, {$sort: {"tag": 1}})
+    %% mongodb_pool:find_sort(PoolName, Collection, Selector1, Sort1),
+    PassSeq = mongodb_pool:aggregate(PoolName, Collection, {<<"key">>, <<"test">>}, [{sort, {<<"tag">>, 1}}]),
     [
      #{<<"key">> := <<"test">>, <<"value">> := <<"one">>, <<"tag">> := 1},
      #{<<"key">> := <<"test">>, <<"value">> := <<"two">>, <<"tag">> := 2},
      #{<<"key">> := <<"test">>, <<"value">> := <<"three">>, <<"tag">> := 3},
      #{<<"key">> := <<"test">>, <<"value">> := <<"four">>, <<"tag">> := 4}
-    ] = Res,
+    ] = PassSeq,
+    InvertedSeq = mongodb_pool:aggregate(PoolName, Collection, [{match, {<<"key">>, <<"test">>}}, {sort, {<<"tag">>, -1}}]),
+    [
+     #{<<"key">> := <<"test">>, <<"value">> := <<"four">>, <<"tag">> := 4},
+     #{<<"key">> := <<"test">>, <<"value">> := <<"three">>, <<"tag">> := 3},
+     #{<<"key">> := <<"test">>, <<"value">> := <<"two">>, <<"tag">> := 2},
+     #{<<"key">> := <<"test">>, <<"value">> := <<"one">>, <<"tag">> := 1}
+    ] = InvertedSeq,
 
     %% test match & sort with limit
-    {true, #{<<"result">> := Res1}} = mongodb_pool:command(PoolName,
-                                                    {<<"aggregate">>, Collection, <<"pipeline">>,
-                                                     [
-                                                      {<<"$match">>, {<<"key">>, <<"test">>}},
-                                                      {<<"$sort">>, {<<"tag">>, 1}},
-                                                      {<<"$limit">>, 1}
-                                                     ]}),
+    %% db.sort_and_limit.aggregate({$match: {"key": "test"}}, {$sort: {"tag": -1}}, {$limit: 1})
+    SortLimit = mongodb_pool:aggregate(PoolName, Collection,
+                                       [{match, {{<<"key">>, <<"test">>}}},
+                                        {sort, {<<"tag">>, 1}},
+                                        {limit, 1}]),
+    [#{<<"key">> := <<"test">>, <<"value">>:= <<"one">>, <<"tag">> := 1}] = SortLimit,
 
-    [
-     #{<<"key">> := <<"test">>, <<"value">>:= <<"one">>, <<"tag">> := 1}
-    ] = Res1,
+    %% test match & sort with limit
+    %% db.sort_and_limit.aggregate({$match: {"key": "test"}}, {$sort: {"tag": 1}}, {$limit: 1})
+    ProjSortLimit = mongodb_pool:aggregate(PoolName, Collection,
+                                       [{match, {{<<"key">>, <<"test">>}}},
+                                        {project, [{<<"_id">>, 0, <<"key">>, 1, <<"value">>, 1}]},
+                                        {sort, {<<"tag">>, 1}},
+                                        {limit, 1}]),
+    [#{<<"key">> := <<"test">>, <<"value">>:= <<"one">>}] = ProjSortLimit,
     Config.
 
+insert_map(Config) ->
+    PoolName = ?config(pool_name, Config),
+    Collection = ?config(collection, Config),
+    mongodb_pool:delete(PoolName, Collection, {}),
+    Map = #{<<"name">> => <<"Yankees">>,
+            <<"home">> => #{<<"city">> => <<"New York">>, <<"state">> => <<"NY">>},
+            <<"league">> => <<"American">>},
+    mongodb_pool:insert(PoolName, Collection, Map),
+    [Res1] = mongodb_pool:find(PoolName, Collection, {<<"home">>, {<<"city">>, <<"New York">>, <<"state">>, <<"NY">>}}, [{projector, {<<"_id">>, false}}]),
+    #{<<"home">> := #{<<"city">> := <<"New York">>, <<"state">> := <<"NY">>},
+      <<"league">> := <<"American">>, <<"name">> := <<"Yankees">>} = Res1,
+
+    Maps = [#{<<"name">> => <<"Yankees">>,
+              <<"home">> => #{<<"city">> => <<"New York">>, <<"state">> => <<"NY">>},
+              <<"league">> => <<"American">>},
+            #{<<"name">> => <<"Xclee">>,
+              <<"home">> => #{<<"city">> => <<"Zhaotong">>, <<"state">> => <<"YN">>},
+              <<"league">> => <<"China">>},
+            #{<<"name">> => <<"LeeXc">>,
+              <<"home">> => #{<<"city">> => <<"Shenzhen">>, <<"state">> => <<"GD">>},
+              <<"league">> => <<"China">>}
+           ],
+    mongodb_pool:insert(PoolName, Collection, Maps),
+    Res2 = mongodb_pool:find(PoolName, Collection, {<<"league">>, <<"China">>}, [{projector, {<<"_id">>, false}}]),
+    ct:log("Res2:~p~n", [Res2]),
+    true = lists:member(#{<<"name">> => <<"Xclee">>,
+                          <<"home">> => #{<<"city">> => <<"Zhaotong">>, <<"state">> => <<"YN">>},
+                          <<"league">> => <<"China">>}, Res2),
+    true = lists:member(#{<<"name">> => <<"LeeXc">>,
+                          <<"home">> => #{<<"city">> => <<"Shenzhen">>, <<"state">> => <<"GD">>},
+                          <<"league">> => <<"China">>}, Res2),
+    ok.
 
 %% @private
 match_bson(Tuple1, Tuple2) when length(Tuple1) /= length(Tuple2) -> false;
