@@ -16,7 +16,7 @@
                                      {size, 5},
                                      {max_overflow, 5}
                                     ], [
-                                        {host, "localhost"},
+                                        {host, "192.168.1.100"},
                                         {port, 27017},
                                         {database, <<"test">>}
                                        ]}
