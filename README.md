@@ -31,6 +31,11 @@ $ erl -pa ebin -pa ./deps/*/ebin
 > application:ensure_all_started(mongodb_pool).
 {ok,[poolboy,bson,crypto,mongodb,mongodb_pool]}
 ````````````````````
+## Note 在emqttd中认证的问题
+````````````````````
+<<"Can't pass authentification">> in mc_auth_logic:scram_sha_1_auth
+````````````````````
+单独使用mongodb_pool的时候是没有问题的，但是在emqttd 中使用的时候就会提示这个问题。原因是relx.conf中的pbkdf2没有load.
 
 ## 数据库操作
 Selector是数据库操作必须的。因为很多时候需要按条件操作。最外层是一个tuple， 里面可以通过and，or，not这些逻辑运算和mongodb提供的算数比较组合。
