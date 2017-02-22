@@ -45,8 +45,12 @@ find(PoolName, Collection, Selector)->
 %% Projector = #{projector => P}
 find(PoolName, Collection, Selector, Projector)->
     poolboy:transaction(PoolName, fun(Worker) ->
-                                          {ok, Cursor} = mc_worker_api:find(Worker, Collection, Selector, Projector),
-                                          mc_cursor:rest(Cursor)
+                                          case mc_worker_api:find(Worker, Collection, Selector, Projector) of
+                                              {ok, Cursor} ->
+                                                  mc_cursor:rest(Cursor);
+                                              [] ->
+                                                  []
+                                          end
                                   end).
 
 -spec find_limit(PoolName::atom(), Collection::collection(),Selector::selector(), Limit::map())->
@@ -54,8 +58,12 @@ find(PoolName, Collection, Selector, Projector)->
 %% Limit = #{projector => #{}, skip => NumSkip, batchsize => NumBatchSize}
 find_limit(PoolName, Collection, Selector, Limit)->
     poolboy:transaction(PoolName, fun(Worker) ->
-                                          {ok, Cursor} = mc_worker_api:find(Worker, Collection, Selector, Limit),
-                                          mc_cursor:next_batch(Cursor)
+                                          case  mc_worker_api:find(Worker, Collection, Selector, Limit) of
+                                              {ok, Cursor} ->
+                                                  mc_cursor:next_batch(Cursor);
+                                              [] ->
+                                                  []
+                                          end
                                   end).
 
 -spec find_one(PoolName::atom(), Collection::collection(), Selector::selector())->
