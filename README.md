@@ -47,10 +47,10 @@ Selector是数据库操作必须的。因为很多时候需要按条件操作。
 Docs可以是tuple，map或者以它们为元素的list：
 
 ````````````````````
-> mongodb_pool:insert(PoolName, Collection, {<<"x">>", 1, <<"y">>, 2}).
-> mongodb_pool:insert(PoolName, Collection, [{<<"x">>", 1, <<"y">>, 2}]).
-> mongodb_pool:insert(PoolName, Collection, #{<<"x">>", 1, <<"y">>, 2}).
-> mongodb_pool:insert(PoolName, Collection, [#{<<"x">>", 1, <<"y">>, 2}]).
+> mongodb_pool:insert(PoolName, Collection, {<<"x">>, 1, <<"y">>, 2}).
+> mongodb_pool:insert(PoolName, Collection, [{<<"x">>, 1, <<"y">>, 2}]).
+> mongodb_pool:insert(PoolName, Collection, #{<<"x">>, 1, <<"y">>, 2}).
+> mongodb_pool:insert(PoolName, Collection, [#{<<"x">>, 1, <<"y">>, 2}]).
 ````````````````````
 
 ### 查询（结果以map形式返回）
