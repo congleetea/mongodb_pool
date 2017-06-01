@@ -98,3 +98,16 @@ Command:  {$set/$unset/$inc/..., TupleDocs}
 > mongodb_pool:delete_one(mongo_test_pool, <<"test">>, {<<"a">>, 1}).
 {true,#{<<"n">> => 1}}
 `````````
+### tips
+处理ISODate时间问题：
+`````````
+> mongodb_pool:insert(mongo_test_pool, <<"test">>, {<<"time">>, {1496,289436,401239}}).
+{{true,#{<<"n">> => 1}},
+ {<<"time">>,
+  {1496,289436,401239},
+  <<"_id">>,
+  {<<89,47,144,225,54,96,68,41,149,0,0,1>>}}}
+> mongodb_pool:find(mongo_test_pool, <<"test">>, {}).
+[ #{<<"_id">> => {<<89,47,144,225,54,96,68,41,149,0,0,1>>},
+   <<"time">> => {1496,289436,401000}}]
+`````````
